@@ -1,12 +1,16 @@
-#pragma once
+#ifndef DESCRIPTORS_H
+#define DESCRIPTORS_H
 
 #include "../vk_context/vk_context.hpp"
 #include "buffers.hpp"
 #include "images.hpp"
 #include "resources.hpp"
+#include "camera.hpp"
 
 typedef struct UniformBufferObject {
-    uint32_t frameCount;
+    CameraUBO camera;
+    glm::vec4 minXYZ;
+    glm::vec4 maxXYZ;
 } UniformBufferObject;
 
 class Descriptors {
@@ -46,3 +50,4 @@ public:
     void init(VulkanContext *vko, Buffers *buffers, Images *images, Resources *resources);
     void destroy();
 };
+#endif

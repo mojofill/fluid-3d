@@ -128,6 +128,19 @@ vk_app/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\vk_app.dir\build.make CMakeFiles/vk_app.dir/build
 .PHONY : vk_app/fast
 
+#=============================================================================
+# Target rules for targets named glm
+
+# Build rule for target.
+glm: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 glm
+.PHONY : glm
+
+# fast build rule for target.
+glm/fast:
+	$(MAKE) $(MAKESILENT) -f src\glm\glm\CMakeFiles\glm.dir\build.make src/glm/glm/CMakeFiles/glm.dir/build
+.PHONY : glm/fast
+
 src/engine/buffers.obj: src/engine/buffers.cpp.obj
 .PHONY : src/engine/buffers.obj
 
@@ -151,6 +164,30 @@ src/engine/buffers.s: src/engine/buffers.cpp.s
 src/engine/buffers.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\vk_app.dir\build.make CMakeFiles/vk_app.dir/src/engine/buffers.cpp.s
 .PHONY : src/engine/buffers.cpp.s
+
+src/engine/camera.obj: src/engine/camera.cpp.obj
+.PHONY : src/engine/camera.obj
+
+# target to build an object file
+src/engine/camera.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\vk_app.dir\build.make CMakeFiles/vk_app.dir/src/engine/camera.cpp.obj
+.PHONY : src/engine/camera.cpp.obj
+
+src/engine/camera.i: src/engine/camera.cpp.i
+.PHONY : src/engine/camera.i
+
+# target to preprocess a source file
+src/engine/camera.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\vk_app.dir\build.make CMakeFiles/vk_app.dir/src/engine/camera.cpp.i
+.PHONY : src/engine/camera.cpp.i
+
+src/engine/camera.s: src/engine/camera.cpp.s
+.PHONY : src/engine/camera.s
+
+# target to generate assembly for a file
+src/engine/camera.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\vk_app.dir\build.make CMakeFiles/vk_app.dir/src/engine/camera.cpp.s
+.PHONY : src/engine/camera.cpp.s
 
 src/engine/descriptors.obj: src/engine/descriptors.cpp.obj
 .PHONY : src/engine/descriptors.obj
@@ -568,10 +605,14 @@ help:
 	@echo ... depend
 	@echo ... edit_cache
 	@echo ... rebuild_cache
+	@echo ... glm
 	@echo ... vk_app
 	@echo ... src/engine/buffers.obj
 	@echo ... src/engine/buffers.i
 	@echo ... src/engine/buffers.s
+	@echo ... src/engine/camera.obj
+	@echo ... src/engine/camera.i
+	@echo ... src/engine/camera.s
 	@echo ... src/engine/descriptors.obj
 	@echo ... src/engine/descriptors.i
 	@echo ... src/engine/descriptors.s

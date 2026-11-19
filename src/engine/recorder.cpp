@@ -41,7 +41,7 @@ void Recorder::resetCommands() {
     }
 }
 
-void Recorder::drawStorageImage(uint32_t currentFrame, uint32_t i) {
+void Recorder::drawStorageImage(uint32_t ping, uint32_t i) {
     VkRenderPassBeginInfo renderPassInfoCmd{}; // most basic command is starting a render pass
     renderPassInfoCmd.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassInfoCmd.renderPass = renderPass->renderPass;
@@ -60,7 +60,7 @@ void Recorder::drawStorageImage(uint32_t currentFrame, uint32_t i) {
 
     // here is graphipcs pipeline work
     vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines->graphicsPipeline);
-    vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines->graphicsPipelineLayout, 0, 1, &descriptors->descriptorSets[currentFrame], 0, NULL);
+    vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines->graphicsPipelineLayout, 0, 1, &descriptors->descriptorSets[ping], 0, NULL);
 
     // specified viewport + scissor to be dynamic => must explicity set them here
     viewport = (VkViewport) {0};
@@ -82,25 +82,36 @@ void Recorder::drawStorageImage(uint32_t currentFrame, uint32_t i) {
     vkCmdDraw(commandBuffers[i], buffers->vertexCount, 1, 0, 0);
 }
 
-void Recorder::testComputeShader(uint32_t currentFrame, uint32_t i) {
+void Recorder::testComputeShader(uint32_t ping, uint32_t i) {
     // first, i want use the compute shader pipeline
     vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_COMPUTE, pipelines->computePipeline);
-    vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_COMPUTE, pipelines->computePipelineLayout, 0, 1, &descriptors->descriptorSets[currentFrame], 0, NULL);
+    vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_COMPUTE, pipelines->computePipelineLayout, 0, 1, &descriptors->descriptorSets[ping], 0, NULL);
     vkCmdDispatch(commandBuffers[i], (vko->width + 15) / 16, (vko->height + 15) / 16, 1);
     Compute::createImageMemoryBarrier(resources->storageImage, commandBuffers[i]);
 }
 
-void Recorder::recordCommands(uint32_t currentFrame) {
+void Recorder::testComputeShader2(uint32_t ping, uint32_t i) {
+    vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_COMPUTE, pipelines->testComputePipeline);
+    vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_COMPUTE, pipelines->testComputePipelineLayout, 0, 1, &descriptors->descriptorSets[ping], 0, NULL);
+    vkCmdDispatch(commandBuffers[i], (maxXYZ.x - minXYZ.x + 7) / 8, (maxXYZ.y - minXYZ.y + 7) / 8, (maxXYZ.z - minXYZ.z + 7) / 8);
+    Compute::createImageMemoryBarrier(resources->densityImages[(ping + 1) % 2], commandBuffers[i]);
+}
+
+void Recorder::recordCommands(uint32_t ping) {
     // record commands (per swapchain image)
+    uint32_t old_ping = ping;
     for (uint32_t i = 0; i < vko->swapchain.swapchainImageCount; i++) {
+        ping = old_ping;
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         vkBeginCommandBuffer(commandBuffers[i], &beginInfo);
 
-        testComputeShader(currentFrame, i);
+        testComputeShader2(ping, i);
+        ping = ping == 0 ? 1 : 0; // swap ping
+        testComputeShader(ping, i);
 
         // draw the full screen quad
-        drawStorageImage(currentFrame, i);
+        drawStorageImage(ping, i);
 
         vkCmdEndRenderPass(commandBuffers[i]);
         vkEndCommandBuffer(commandBuffers[i]);

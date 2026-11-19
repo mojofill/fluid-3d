@@ -48,6 +48,7 @@ void Swapchain::destroy() {
         vkDestroyImageView(device->device, swapchainImageViews[i], NULL);
     }
     free(swapchainImages);
+    free(swapchainImageViews);
     vkDestroySwapchainKHR(device->device, swapchain, NULL);
 }
 

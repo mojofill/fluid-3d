@@ -9,6 +9,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "C:/Users/henry/Desktop/graphics-projects/fluid-3d/src/engine/buffers.cpp" "CMakeFiles/vk_app.dir/src/engine/buffers.cpp.obj" "gcc" "CMakeFiles/vk_app.dir/src/engine/buffers.cpp.obj.d"
+  "C:/Users/henry/Desktop/graphics-projects/fluid-3d/src/engine/camera.cpp" "CMakeFiles/vk_app.dir/src/engine/camera.cpp.obj" "gcc" "CMakeFiles/vk_app.dir/src/engine/camera.cpp.obj.d"
   "C:/Users/henry/Desktop/graphics-projects/fluid-3d/src/engine/descriptors.cpp" "CMakeFiles/vk_app.dir/src/engine/descriptors.cpp.obj" "gcc" "CMakeFiles/vk_app.dir/src/engine/descriptors.cpp.obj.d"
   "C:/Users/henry/Desktop/graphics-projects/fluid-3d/src/engine/engine.cpp" "CMakeFiles/vk_app.dir/src/engine/engine.cpp.obj" "gcc" "CMakeFiles/vk_app.dir/src/engine/engine.cpp.obj.d"
   "C:/Users/henry/Desktop/graphics-projects/fluid-3d/src/engine/images.cpp" "CMakeFiles/vk_app.dir/src/engine/images.cpp.obj" "gcc" "CMakeFiles/vk_app.dir/src/engine/images.cpp.obj.d"

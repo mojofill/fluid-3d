@@ -11,6 +11,11 @@ public:
     Device device;
     Swapchain swapchain;
     CommandPool commandPool;
+
+    // information glfw can transport back and forth via window user pointer
+    uint32_t framebufferResized = 0;
+    bool fullscreen = false;
+
     void init();
     void destroy();
     VkCommandBuffer beginSingleTimeCommand();

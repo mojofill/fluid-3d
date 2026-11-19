@@ -12,10 +12,12 @@ private:
 public:
     VkVertexInputBindingDescription bindingDescs[1];
 	VkVertexInputAttributeDescription attrDescs[1];
-    VkPipeline graphicsPipeline = VK_NULL_HANDLE;
-    VkPipelineLayout graphicsPipelineLayout = VK_NULL_HANDLE;
-    VkPipeline computePipeline = VK_NULL_HANDLE;
-    VkPipelineLayout computePipelineLayout = VK_NULL_HANDLE;
+    VkPipeline graphicsPipeline                = VK_NULL_HANDLE;
+    VkPipelineLayout graphicsPipelineLayout    = VK_NULL_HANDLE;
+    VkPipeline computePipeline                 = VK_NULL_HANDLE;
+    VkPipelineLayout computePipelineLayout     = VK_NULL_HANDLE;
+    VkPipeline testComputePipeline             = VK_NULL_HANDLE;
+    VkPipelineLayout testComputePipelineLayout = VK_NULL_HANDLE;
 
     void init(VulkanContext *vko);
 

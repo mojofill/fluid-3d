@@ -25,6 +25,9 @@ private:
 
     void createCommandBuffers();
 public:
+    glm::vec3 minXYZ;
+    glm::vec3 maxXYZ;
+
     VkCommandBuffer *commandBuffers;
     void init(
         VulkanContext *vko,
@@ -39,9 +42,10 @@ public:
     void destroy();
 
     // compute shader functions
-    void testComputeShader(uint32_t currentFrame, uint32_t i);
+    void testComputeShader(uint32_t ping, uint32_t i);
+    void testComputeShader2(uint32_t ping, uint32_t i);
 
-    void drawStorageImage(uint32_t currentFrame, uint32_t i);
-    void recordCommands(uint32_t currentFrame);
+    void drawStorageImage(uint32_t ping, uint32_t i);
+    void recordCommands(uint32_t ping);
     void resetCommands();
 };

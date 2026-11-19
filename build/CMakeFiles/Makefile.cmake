@@ -26,6 +26,7 @@ set(CMAKE_MAKEFILE_DEPENDS
   "C:/Program Files/CMake/share/cmake-4.4/Modules/FindPackageMessage.cmake"
   "C:/Program Files/CMake/share/cmake-4.4/Modules/FindThreads.cmake"
   "C:/Program Files/CMake/share/cmake-4.4/Modules/FindVulkan.cmake"
+  "C:/Program Files/CMake/share/cmake-4.4/Modules/GNUInstallDirs.cmake"
   "C:/Program Files/CMake/share/cmake-4.4/Modules/Internal/CMakeCXXLinkerInformation.cmake"
   "C:/Program Files/CMake/share/cmake-4.4/Modules/Internal/CMakeCommonLinkerInformation.cmake"
   "C:/Program Files/CMake/share/cmake-4.4/Modules/Internal/CheckCommon.cmake"
@@ -46,6 +47,8 @@ set(CMAKE_MAKEFILE_DEPENDS
   "CMakeFiles/4.4.2/CMakeCXXCompiler.cmake"
   "CMakeFiles/4.4.2/CMakeRCCompiler.cmake"
   "CMakeFiles/4.4.2/CMakeSystem.cmake"
+  "C:/Users/henry/Desktop/graphics-projects/fluid-3d/src/glm/CMakeLists.txt"
+  "C:/Users/henry/Desktop/graphics-projects/fluid-3d/src/glm/glm/CMakeLists.txt"
   "C:/glfw-mingw/lib/cmake/glfw3/glfw3Config.cmake"
   "C:/glfw-mingw/lib/cmake/glfw3/glfw3ConfigVersion.cmake"
   "C:/glfw-mingw/lib/cmake/glfw3/glfw3Targets-noconfig.cmake"
@@ -61,9 +64,12 @@ set(CMAKE_MAKEFILE_OUTPUTS
 # Byproducts of CMake generate step:
 set(CMAKE_MAKEFILE_PRODUCTS
   "CMakeFiles/CMakeDirectoryInformation.cmake"
+  "src/glm/CMakeFiles/CMakeDirectoryInformation.cmake"
+  "src/glm/glm/CMakeFiles/CMakeDirectoryInformation.cmake"
   )
 
 # Dependency information for all targets:
 set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/vk_app.dir/DependInfo.cmake"
+  "src/glm/glm/CMakeFiles/glm.dir/DependInfo.cmake"
   )

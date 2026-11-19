@@ -25,8 +25,8 @@ void Framebuffers::createFramebuffers() {
 }
 
 void Framebuffers::framebufferResizeCallback() {
-    Framebuffers *framebuffers = (Framebuffers*) glfwGetWindowUserPointer(vko->device.window);
-    framebuffers->framebufferResized = 1;
+    VulkanContext *vko = (VulkanContext*) glfwGetWindowUserPointer(vko->device.window);
+    vko->framebufferResized = 1;
     printf("frame buffer resized!\n");
 }
 
@@ -39,7 +39,7 @@ void Framebuffers::destroy() {
 void Framebuffers::init(VulkanContext *vko, RenderPass *renderPass) {
     this->vko = vko;
     this->renderPass = renderPass;
-    glfwSetWindowUserPointer(vko->device.window, this);
+    glfwSetWindowUserPointer(vko->device.window, vko);
     framebuffers = (VkFramebuffer*) malloc(sizeof(VkFramebuffer) * vko->swapchain.swapchainImageCount);
     
     for (uint32_t i = 0; i < vko->swapchain.swapchainImageCount; i++) {

@@ -60,6 +60,24 @@ void Descriptors::createDescriptorSetResources() {
         VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
     );
 
+    // density image WRITE
+    addDescriptorSetLayoutBinding(
+        bindings,
+        poolSizes,
+        2,
+        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+        VK_SHADER_STAGE_COMPUTE_BIT
+    );
+
+    // density image READ (with sampler)
+    addDescriptorSetLayoutBinding(
+        bindings,
+        poolSizes,
+        3,
+        VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+        VK_SHADER_STAGE_COMPUTE_BIT
+    );
+
     // create descriptor set layout
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -118,10 +136,10 @@ void Descriptors::createDescriptorSets() {
     }
 
     // populate descriptors
-    for (int i = 0; i < 2; i++) {
+    for (int ping = 0; ping < 2; ping++) {
         // add buffer to descriptor set
         VkDescriptorBufferInfo bufferInfo = {0};
-        bufferInfo.buffer = buffers->uniformBuffers[i];
+        bufferInfo.buffer = buffers->uniformBuffers[ping];
         bufferInfo.offset = 0;
         bufferInfo.range = sizeof(UniformBufferObject);
 
@@ -130,13 +148,27 @@ void Descriptors::createDescriptorSets() {
         imageInfo.imageView = resources->storageImageView;
         imageInfo.sampler = resources->storageSampler;
 
+        int opp_ping = (ping + 1) % 2;
+
+        VkDescriptorImageInfo densityImageREADInfo = {
+            .sampler = resources->densitySampler,
+            .imageView = resources->densityImageViews[ping],
+            .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+        };
+
+        VkDescriptorImageInfo densityImageWRITEInfo = {
+            .sampler = VK_NULL_HANDLE,
+            .imageView = resources->densityImageViews[opp_ping],
+            .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+        };
+
         // write to descriptor set
         std::vector<VkWriteDescriptorSet> descriptorWrites;
 
         // uniform buffer
         addWriteBufferDescriptorSet(
             descriptorWrites,
-            descriptorSets[i],
+            descriptorSets[ping],
             0,
             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             &bufferInfo
@@ -145,10 +177,28 @@ void Descriptors::createDescriptorSets() {
         // storage image
         addWriteImageDescriptorSet(
             descriptorWrites,
-            descriptorSets[i],
+            descriptorSets[ping],
             1,
             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
             &imageInfo
+        );
+
+        // density image READ
+        addWriteImageDescriptorSet(
+            descriptorWrites,
+            descriptorSets[ping],
+            2,
+            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            &densityImageREADInfo
+        );
+
+        // density image WRITE
+        addWriteImageDescriptorSet(
+            descriptorWrites,
+            descriptorSets[ping],
+            3,
+            VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+            &densityImageWRITEInfo
         );
 
         vkUpdateDescriptorSets(vko->device.device, descriptorWrites.size(), descriptorWrites.data(), 0, NULL);

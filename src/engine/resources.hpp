@@ -16,14 +16,15 @@ public:
 	VkImageView storageImageView;
 	VkSampler storageSampler;
 
-    VkImage densityImage;
-    VkDeviceMemory densityMemory;
+    VkImage densityImages[2];
+    VkImageView densityImageViews[2];
+    VkDeviceMemory densityMemories[2];
     VkSampler densitySampler; // necessary for trilinear interpolation
 
     void init(VulkanContext *vko, Buffers *buffers, Images *images);
 
     // resource initializers
-    void createDensityImage(int width, int length, int height);
+    void createDensityImages(int width, int length, int height);
     void createStorageImage(int width, int height);
 
     void destroy();

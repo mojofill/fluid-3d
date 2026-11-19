@@ -8,20 +8,23 @@ void Resources::init(VulkanContext *vko, Buffers *buffers, Images *images) {
 }
 
 // width = x, length = y, height = z
-void Resources::createDensityImage(int width, int length, int height) {
-    images->createImage(
-        VK_IMAGE_TYPE_3D,
-        width,
-        length,
-        height,
-        VK_FORMAT_R32_SFLOAT,
-        VK_IMAGE_TILING_OPTIMAL,
-        VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        &densityImage,
-        &densityMemory
-    );
-    images->createSampler(&densitySampler);
+void Resources::createDensityImages(int width, int length, int height) {
+    for (int i = 0; i < 2; i++) {
+        images->createImage(
+            VK_IMAGE_TYPE_3D,
+            width,
+            length,
+            height,
+            VK_FORMAT_R32_SFLOAT,
+            VK_IMAGE_TILING_OPTIMAL,
+            VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            &densityImages[i],
+            &densityMemories[i]
+        );
+        images->createImageView(densityImages[i], VK_IMAGE_VIEW_TYPE_3D, VK_FORMAT_R32_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT, &densityImageViews[i]);
+    }
+    images->createSampler(&densitySampler, VK_FILTER_LINEAR);
 }
 
 void Resources::createStorageImage(int width, int height) {
@@ -37,14 +40,17 @@ void Resources::createStorageImage(int width, int height) {
         &storageImage,
         &storageImageMemory
     );
-    images->createImageView(storageImage, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT, &storageImageView);
-    images->createSampler(&storageSampler);
+    images->createImageView(storageImage, VK_IMAGE_VIEW_TYPE_2D, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT, &storageImageView);
+    images->createSampler(&storageSampler, VK_FILTER_LINEAR);
 }
 
 void Resources::destroy() {
-    vkDestroyImage(vko->device.device, densityImage, NULL);
+    for (int i = 0; i < 2; i++) {
+        vkDestroyImageView(vko->device.device, densityImageViews[i], NULL);
+        vkDestroyImage(vko->device.device, densityImages[i], NULL);
+        vkFreeMemory(vko->device.device, densityMemories[i], NULL);
+    }
     vkDestroySampler(vko->device.device, densitySampler, NULL);
-    vkFreeMemory(vko->device.device, densityMemory, NULL);
     vkDestroyImage(vko->device.device, storageImage, NULL);
     vkFreeMemory(vko->device.device, storageImageMemory, NULL);
     vkDestroyImageView(vko->device.device, storageImageView, NULL);

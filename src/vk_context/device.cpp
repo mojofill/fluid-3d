@@ -3,14 +3,16 @@
 #include <string.h>
 #include <iostream>
 #include <memory>
+#include "../utils.hpp"
 
 void Device::init(int &width, int &height) {
+    Profiler profiler;
     createWindow(width, height);
     createInstance();
     createPhysicalDevice();
     createSurface();
     findQueueFamilies();
-    createLogcalDevice();
+    createLogicalDevice();
     createSwapchainSupport();
 }
 
@@ -31,14 +33,20 @@ void Device::createWindow(int &width, int &height) {
     width = mode->width;
     height = mode->height;
     glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
-    window = glfwCreateWindow(width, height, "Window", NULL, NULL); // set first NULL to monitor if i want fullscreen
+    monitor = NULL; // uncomment to remove full screen
+    window = glfwCreateWindow(width, height, "Window", monitor, NULL); // set first NULL to monitor if i want fullscreen
+    fullscreen = monitor == NULL;
     if (!window) {
         printf("Failed to create GLFW window\n");
         exit(1);
     }
+
+    glfwSetCursorPos(window, width / 2, height / 2);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
 void Device::createInstance() {
+    Profiler profiler;
     VkApplicationInfo appInfo{};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     appInfo.pApplicationName = "Vulkan: Windows";
@@ -52,9 +60,17 @@ void Device::createInstance() {
     createInfo.pApplicationInfo = &appInfo;
     
     uint32_t glfwExtensionCount;
-    
-    const char** glfwExtensions;
-    glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+
+    #ifdef _WIN32
+        const char* glfwExtensions[] = {
+            VK_KHR_SURFACE_EXTENSION_NAME,
+            VK_KHR_WIN32_SURFACE_EXTENSION_NAME
+        };
+        glfwExtensionCount = 2;
+    #else
+        const char** glfwExtensions;
+        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+    #endif
 
     uint32_t extensionCount = glfwExtensionCount;
     #ifdef __APPLE__
@@ -74,13 +90,11 @@ void Device::createInstance() {
     createInfo.ppEnabledExtensionNames = extensions;
 
     // validation layers
-
     const char* layers[] = {"VK_LAYER_KHRONOS_validation"};
     uint32_t layerCount = 0;
     vkEnumerateInstanceLayerProperties(&layerCount, NULL);
 
     VkLayerProperties* availableLayers = (VkLayerProperties*) malloc(sizeof(VkLayerProperties) * layerCount);
-
     vkEnumerateInstanceLayerProperties(&layerCount, availableLayers);
 
     int validationLayerFound = 0;
@@ -108,10 +122,13 @@ void Device::createInstance() {
     #endif
 
     VkResult res = vkCreateInstance(&createInfo, NULL, &instance);
+
     if (res != VK_SUCCESS) {
         std::cerr << "vkCreateInstance failed: " << res << std::endl;
         exit(1);
     }
+
+    free(extensions);
 }
 
 void Device::createSurface() {
@@ -219,7 +236,7 @@ void Device::findQueueFamilies() {
     }
 }
 
-void Device::createLogcalDevice() {
+void Device::createLogicalDevice() {
     uint32_t extensionCount = 1;
 
     #ifdef __APPLE__
@@ -287,12 +304,13 @@ void Device::createSwapchainSupport() {
     // pick present mode
     uint32_t presentModeCount;
     vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, NULL);
-    VkSurfacePresentModeKHR *presentModes = (VkSurfacePresentModeKHR*) malloc(presentModeCount * sizeof(VkSurfacePresentModeKHR));
+    VkPresentModeKHR *presentModes = (VkPresentModeKHR*) malloc(presentModeCount * sizeof(VkPresentModeKHR));
+    vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, presentModes);
     
     presentMode = VK_PRESENT_MODE_FIFO_KHR;
     // pick mailbox as present mode if available, otherwise fifo (always available)
     for (uint32_t i = 0; i < presentModeCount; i++) {
-        if (presentModes[i].presentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
+        if (presentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
             presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
             break;
         }

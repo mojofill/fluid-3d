@@ -20,6 +20,7 @@ add_executable(vk_app
     src/engine/descriptors.cpp
     src/engine/resources.cpp
     src/engine/recorder.cpp
+    src/engine/camera.cpp
     src/engine/engine.cpp
 
     src/renderer/renderer.cpp
@@ -31,11 +32,15 @@ add_executable(vk_app
     src/renderer/syncer.cpp
 )
 
+add_subdirectory(src/glm)
+
 target_include_directories(vk_app PRIVATE
     ${Vulkan_INCLUDE_DIRS}
+    ${CMAKE_SOURCE_DIR}/src
 )
 
 target_link_libraries(vk_app PRIVATE
     Vulkan::Vulkan
     glfw
+    glm::glm
 )

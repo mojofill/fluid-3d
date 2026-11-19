@@ -8,10 +8,13 @@ void Renderer::init(VulkanContext *vko, Buffers *buffers, Images *images, Descri
     renderPass.init(vko);
     pipelines.init(vko);
     pipelines.createGraphicsPipeline(descriptors, &renderPass, &pipelines.graphicsPipeline, &pipelines.graphicsPipelineLayout, "./src/assets/spvs/vert.spv", "./src/assets/spvs/frag.spv");
-    pipelines.createComputePipeline(descriptors, &pipelines.computePipeline, &pipelines.computePipelineLayout, "./src/assets/spvs/comp.spv");
     framebuffers.init(vko, &renderPass);
     syncer.init(vko);
     recorder->init(vko, images, descriptors, resources, &renderPass, &pipelines, &framebuffers, buffers);
+}
+
+Pipelines& Renderer::getPipelinesRef() {
+    return pipelines;
 }
 
 void Renderer::destroy() {
@@ -21,12 +24,12 @@ void Renderer::destroy() {
     renderPass.destroy();
 }
 
-void Renderer::draw(uint32_t *currentFrame) {
+void Renderer::draw(uint32_t *ping) {
     // wait for previous frame to finish
-    vkWaitForFences(vko->device.device, 1, &syncer.inFlightFences[*currentFrame], VK_TRUE, UINT64_MAX);
+    vkWaitForFences(vko->device.device, 1, &syncer.inFlightFences[*ping], VK_TRUE, UINT64_MAX);
 
     uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(vko->device.device, vko->swapchain.swapchain, UINT64_MAX, syncer.imageAvailableSemaphores[*currentFrame], VK_NULL_HANDLE, &imageIndex); // signal imageAvailableSemaphore when image is available.
+    VkResult result = vkAcquireNextImageKHR(vko->device.device, vko->swapchain.swapchain, UINT64_MAX, syncer.imageAvailableSemaphores[*ping], VK_NULL_HANDLE, &imageIndex); // signal imageAvailableSemaphore when image is available.
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) { // usually happens after window resize
         vko->swapchain.recreateSwapchain();
@@ -38,12 +41,12 @@ void Renderer::draw(uint32_t *currentFrame) {
     }
 
     // only reset to use fence again if we are submitting work
-    vkResetFences(vko->device.device, 1, &syncer.inFlightFences[*currentFrame]);
+    vkResetFences(vko->device.device, 1, &syncer.inFlightFences[*ping]);
 
     // if i were recording every frame, i would need to 1. vkResetCommandBuffer(commandBuffer, 0); to clear command buffer and 2. recordCommandBuffer(commandBuffer, imageIndex);
     // but since everything is pre recorded, i dont need to
 
-    recorder->recordCommands(*currentFrame);
+    recorder->recordCommands(*ping);
 
     // submit commands to queue
     VkSubmitInfo submitInfo{};
@@ -53,12 +56,12 @@ void Renderer::draw(uint32_t *currentFrame) {
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &recorder->commandBuffers[imageIndex];
     submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores = &syncer.imageAvailableSemaphores[*currentFrame]; // wait for imageAvailable semaphore to signal done before rendering
+    submitInfo.pWaitSemaphores = &syncer.imageAvailableSemaphores[*ping]; // wait for imageAvailable semaphore to signal done before rendering
     submitInfo.pWaitDstStageMask = waitStages; // pipeline stages are synced with wait semaphores - doesnt continue onto stage until wait semaphore signals done
     submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = &syncer.renderFinishedSemaphores[*currentFrame]; // signal renderFinished semaphore when done
+    submitInfo.pSignalSemaphores = &syncer.renderFinishedSemaphores[*ping]; // signal renderFinished semaphore when done
 
-    if (vkQueueSubmit(vko->device.graphicsQueue, 1, &submitInfo, syncer.inFlightFences[*currentFrame]) != VK_SUCCESS) {
+    if (vkQueueSubmit(vko->device.graphicsQueue, 1, &submitInfo, syncer.inFlightFences[*ping]) != VK_SUCCESS) {
         fprintf(stderr, "Failed to submit draw command buffer to graphics queue\n");
         exit(1);
     }
@@ -67,7 +70,7 @@ void Renderer::draw(uint32_t *currentFrame) {
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = &syncer.renderFinishedSemaphores[*currentFrame]; // wait until rendering finished
+    presentInfo.pWaitSemaphores = &syncer.renderFinishedSemaphores[*ping]; // wait until rendering finished
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = &vko->swapchain.swapchain;
     presentInfo.pImageIndices = &imageIndex;
@@ -75,19 +78,19 @@ void Renderer::draw(uint32_t *currentFrame) {
 
     result = vkQueuePresentKHR(vko->device.graphicsQueue, &presentInfo);
 
-    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebuffers.framebufferResized) {
-        framebuffers.framebufferResized = 0;
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || vko->framebufferResized) {
+        vko->framebufferResized = 0;
         vko->swapchain.recreateSwapchain();
         framebuffers.createFramebuffers();
         // rerecord command buffers
         recorder->resetCommands();
-        recorder->recordCommands(*currentFrame);
+        recorder->recordCommands(*ping);
     } else if (result != VK_SUCCESS) {
         printf("Failed to present swapchain image!\n");
         exit(1);
     }
 
-    *currentFrame = (*currentFrame + 1) % 2;
+    *ping = (*ping + 1) % 2;
     
     vkQueueWaitIdle(vko->device.graphicsQueue);
 }

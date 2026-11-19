@@ -11,7 +11,7 @@ private:
     void createSurface();
     void createPhysicalDevice();
     void findQueueFamilies();
-    void createLogcalDevice();
+    void createLogicalDevice();
     void createSwapchainSupport();
 public:
     VkPhysicalDevice physicalDevice;
@@ -24,6 +24,7 @@ public:
     VkQueue graphicsQueue;
     VkQueue presentQueue;
     GLFWwindow* window;
+    bool fullscreen;
     void destroy();
     void init(int &width, int &height);
 };

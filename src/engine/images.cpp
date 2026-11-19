@@ -60,11 +60,17 @@ void Images::createImage(
     transitionImageLayout(*image, format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 }
 
-void Images::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, VkImageView *imageView) {
+void Images::createImageView(
+    VkImage image,
+    VkImageViewType imageViewType,
+    VkFormat format,
+    VkImageAspectFlags aspectFlags,
+    VkImageView *imageView
+) {
     VkImageViewCreateInfo viewInfo{};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image = image;
-    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.viewType = imageViewType;
     viewInfo.format = format;
     viewInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY; // rgba -> rgba. pure identity, no alteration
     viewInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -82,11 +88,11 @@ void Images::createImageView(VkImage image, VkFormat format, VkImageAspectFlags 
     }
 }
 
-void Images::createSampler(VkSampler *pSampler) {
+void Images::createSampler(VkSampler *pSampler, VkFilter filter) {
     VkSamplerCreateInfo samplerInfo{};
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    samplerInfo.magFilter = VK_FILTER_NEAREST; // no interpolation (no blurring)
-    samplerInfo.minFilter = VK_FILTER_NEAREST;
+    samplerInfo.magFilter = filter; // VK_FILTER_NEAREST = no interpolation (no blurring), VK_FILTER_LINEAR = interpolation
+    samplerInfo.minFilter = filter;
     samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;

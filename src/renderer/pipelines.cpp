@@ -55,6 +55,10 @@ void Pipelines::createComputePipeline(Descriptors* descriptors, VkPipeline *dest
 void Pipelines::destroy() {
     vkDestroyPipeline(vko->device.device, graphicsPipeline, NULL);
     vkDestroyPipelineLayout(vko->device.device, graphicsPipelineLayout, NULL);
+    
+    // i feel like compute pipelines should go somewhere else, outside of renderer
     vkDestroyPipeline(vko->device.device, computePipeline, NULL);
     vkDestroyPipelineLayout(vko->device.device, computePipelineLayout, NULL);
+    vkDestroyPipeline(vko->device.device, testComputePipeline, NULL);
+    vkDestroyPipelineLayout(vko->device.device, testComputePipelineLayout, NULL);
 }

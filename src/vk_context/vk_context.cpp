@@ -1,9 +1,13 @@
 #include "vk_context.hpp"
+#include "../utils.hpp"
 
 void VulkanContext::init() {
+    Profiler profiler;
     device.init(width, height);
     swapchain.init(&device);
+    profiler.mark("swapchain initialization");
     commandPool.init(&device);
+    profiler.mark("command pool initialization");
 }
 
 void VulkanContext::destroy() {

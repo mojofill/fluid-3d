@@ -27,11 +27,13 @@ public:
 	);
 	void createImageView(
 		VkImage image,
+		VkImageViewType imageViewType,
 		VkFormat format,
 		VkImageAspectFlags aspectFlags,
 		VkImageView *imageView
 	);
-	void createSampler(VkSampler *pSampler);
+	// interpolate = VK_LINEAR, no interpolation = VK_NEAREST
+	void createSampler(VkSampler *pSampler, VkFilter filter);
 
 	void init(VulkanContext *vko);
 	void destroy();

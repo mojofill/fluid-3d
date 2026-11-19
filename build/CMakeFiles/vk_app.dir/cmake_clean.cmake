@@ -1,6 +1,8 @@
 file(REMOVE_RECURSE
   "CMakeFiles/vk_app.dir/src/engine/buffers.cpp.obj"
   "CMakeFiles/vk_app.dir/src/engine/buffers.cpp.obj.d"
+  "CMakeFiles/vk_app.dir/src/engine/camera.cpp.obj"
+  "CMakeFiles/vk_app.dir/src/engine/camera.cpp.obj.d"
   "CMakeFiles/vk_app.dir/src/engine/descriptors.cpp.obj"
   "CMakeFiles/vk_app.dir/src/engine/descriptors.cpp.obj.d"
   "CMakeFiles/vk_app.dir/src/engine/engine.cpp.obj"
