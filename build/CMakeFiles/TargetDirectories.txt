@@ -1,8 +1,0 @@
-C:/Users/henry/Desktop/graphics-projects/fluid-3d/build/CMakeFiles/vk_app.dir
-C:/Users/henry/Desktop/graphics-projects/fluid-3d/build/CMakeFiles/edit_cache.dir
-C:/Users/henry/Desktop/graphics-projects/fluid-3d/build/CMakeFiles/rebuild_cache.dir
-C:/Users/henry/Desktop/graphics-projects/fluid-3d/build/src/glm/CMakeFiles/edit_cache.dir
-C:/Users/henry/Desktop/graphics-projects/fluid-3d/build/src/glm/CMakeFiles/rebuild_cache.dir
-C:/Users/henry/Desktop/graphics-projects/fluid-3d/build/src/glm/glm/CMakeFiles/glm.dir
-C:/Users/henry/Desktop/graphics-projects/fluid-3d/build/src/glm/glm/CMakeFiles/edit_cache.dir
-C:/Users/henry/Desktop/graphics-projects/fluid-3d/build/src/glm/glm/CMakeFiles/rebuild_cache.dir
