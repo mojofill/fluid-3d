@@ -4,9 +4,15 @@ echo Compiling shaders ...
 
 slangc src\assets\shaders\vert.slang -target spirv -profile spirv_1_5 -entry main -stage vertex -o src\assets\spvs\vert.spv
 slangc src\assets\shaders\frag.slang -target spirv -profile spirv_1_5 -entry main -stage fragment -o src\assets\spvs\frag.spv
-slangc src\assets\shaders\comp.slang -target spirv -profile spirv_1_5 -entry main -stage compute -o src\assets\spvs\comp.spv
+slangc src\assets\shaders\raymarchDensity.slang -target spirv -profile spirv_1_5 -entry main -stage compute -o src\assets\spvs\raymarchDensity.spv
 slangc src\assets\shaders\utils.slang -o src\assets\shaders\utils.slang-module
-slangc src\assets\shaders\test.slang -target spirv -profile spirv_1_5 -entry main -stage compute -o src\assets\spvs\test.spv
+slangc src\assets\shaders\initialization.slang -target spirv -profile spirv_1_5 -entry main -stage compute -o src\assets\spvs\initialization.spv
+slangc src\assets\shaders\applyExternalForces.slang -target spirv -profile spirv_1_5 -entry main -stage compute -o src\assets\spvs\applyExternalForces.spv
+slangc src\assets\shaders\advectVelocities.slang -target spirv -profile spirv_1_5 -entry main -stage compute -o src\assets\spvs\advectVelocities.spv
+slangc src\assets\shaders\solvePressure.slang -target spirv -profile spirv_1_5 -entry main -stage compute -o src\assets\spvs\solvePressure.spv
+slangc src\assets\shaders\applyPressureForce.slang -target spirv -profile spirv_1_5 -entry main -stage compute -o src\assets\spvs\applyPressureForce.spv
+slangc src\assets\shaders\advectDensity.slang -target spirv -profile spirv_1_5 -entry main -stage compute -o src\assets\spvs\advectDensity.spv
+slangc src\assets\shaders\persistData.slang -target spirv -profile spirv_1_5 -entry main -stage compute -o src\assets\spvs\persistData.spv
 
 echo Configuring CMake...
 cmake -S . -B build ^

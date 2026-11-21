@@ -11,7 +11,16 @@ typedef struct UniformBufferObject {
     CameraUBO camera;
     glm::vec4 minXYZ;
     glm::vec4 maxXYZ;
+    uint32_t frameCount;
+    float g;
+    float dt;
+    float weightSOR;
+    float density;
 } UniformBufferObject;
+
+typedef struct PushConstants {
+    uint32_t ping;
+} PushConstants;
 
 class Descriptors {
 private:
@@ -24,7 +33,8 @@ private:
         std::vector<VkDescriptorPoolSize> &poolSizes,
         uint32_t binding,
         VkDescriptorType descriptorType,
-        VkShaderStageFlags stageFlags
+        VkShaderStageFlags stageFlags,
+        const VkSampler *pImmutableSampler
     );
     void addWriteBufferDescriptorSet(
         std::vector<VkWriteDescriptorSet> &desciptorWrites,

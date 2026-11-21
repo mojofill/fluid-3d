@@ -42,10 +42,26 @@ public:
     void destroy();
 
     // compute shader functions
-    void testComputeShader(uint32_t ping, uint32_t i);
-    void testComputeShader2(uint32_t ping, uint32_t i);
-
+    void runComputeShader(
+        uint32_t ping,
+        VkCommandBuffer &commandBuffer,
+        Pipeline &computePipeline,
+        uint32_t groupCountX,
+        uint32_t groupCountY,
+        uint32_t groupCountZ
+    );
+    void addImageMemoryBarriers(uint32_t ping, VkCommandBuffer &commandBuffer);
+    
+    void raymarchDensityFieldComputeShader(uint32_t ping, VkCommandBuffer &commandBuffer);
+    void initializationComputeShader(uint32_t ping, VkCommandBuffer &commandBuffer);
+    void applyExternalForcesComputeShader(uint32_t ping, VkCommandBuffer &commandBuffer);
+    void advectVelocitiesComputeShader(uint32_t ping, VkCommandBuffer &commandBuffer);
+    void solvePressureComputeShader(uint32_t ping, VkCommandBuffer &commandBuffer);
+    void applyPressureForceComputeShader(uint32_t ping, VkCommandBuffer &commandBuffer);
+    void advectDensityComputeShader(uint32_t ping, VkCommandBuffer &commandBuffer);
+    void persistDataComputeShader(uint32_t ping, VkCommandBuffer &commandBuffer);
+    
     void drawStorageImage(uint32_t ping, uint32_t i);
-    void recordCommands(uint32_t ping);
+    void recordCommands();
     void resetCommands();
 };

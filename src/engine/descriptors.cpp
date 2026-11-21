@@ -20,13 +20,15 @@ void Descriptors::addDescriptorSetLayoutBinding(
     std::vector<VkDescriptorPoolSize> &poolSizes,
     uint32_t binding,
     VkDescriptorType descriptorType,
-    VkShaderStageFlags stageFlags
+    VkShaderStageFlags stageFlags,
+    const VkSampler *pImmutableSampler
 ) {
     VkDescriptorSetLayoutBinding layoutBinding{
         .binding = binding,
         .descriptorType = descriptorType,
         .descriptorCount = 1, // for now its always 1
-        .stageFlags = stageFlags
+        .stageFlags = stageFlags,
+        .pImmutableSamplers = pImmutableSampler
     };
 
     VkDescriptorPoolSize poolSize{
@@ -48,7 +50,8 @@ void Descriptors::createDescriptorSetResources() {
         poolSizes,
         0,
         VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
+        NULL
     );
 
     // storage image
@@ -57,25 +60,128 @@ void Descriptors::createDescriptorSetResources() {
         poolSizes,
         1,
         VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-        VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
+        VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        NULL
+    );
+
+    // density image READ
+    addDescriptorSetLayoutBinding(
+        bindings,
+        poolSizes,
+        2,
+        VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+        VK_SHADER_STAGE_COMPUTE_BIT,
+        NULL
     );
 
     // density image WRITE
     addDescriptorSetLayoutBinding(
         bindings,
         poolSizes,
-        2,
-        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        VK_SHADER_STAGE_COMPUTE_BIT
+        3,
+        VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+        VK_SHADER_STAGE_COMPUTE_BIT,
+        NULL
     );
 
-    // density image READ (with sampler)
+    // x velocities READ
     addDescriptorSetLayoutBinding(
         bindings,
         poolSizes,
-        3,
+        4,
+        VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+        VK_SHADER_STAGE_COMPUTE_BIT,
+        NULL
+    );
+
+    // y velocities READ
+    addDescriptorSetLayoutBinding(
+        bindings,
+        poolSizes,
+        5,
+        VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+        VK_SHADER_STAGE_COMPUTE_BIT,
+        NULL
+    );
+
+    // z velocities READ
+    addDescriptorSetLayoutBinding(
+        bindings,
+        poolSizes,
+        6,
+        VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+        VK_SHADER_STAGE_COMPUTE_BIT,
+        NULL
+    );
+
+    // x velocities WRITE
+    addDescriptorSetLayoutBinding(
+        bindings,
+        poolSizes,
+        7,
         VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-        VK_SHADER_STAGE_COMPUTE_BIT
+        VK_SHADER_STAGE_COMPUTE_BIT,
+        NULL
+    );
+
+    // y velocities WRITE
+    addDescriptorSetLayoutBinding(
+        bindings,
+        poolSizes,
+        8,
+        VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+        VK_SHADER_STAGE_COMPUTE_BIT,
+        NULL
+    );
+
+    // z velocities WRITE
+    addDescriptorSetLayoutBinding(
+        bindings,
+        poolSizes,
+        9,
+        VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+        VK_SHADER_STAGE_COMPUTE_BIT,
+        NULL
+    );
+
+    // linear sampler
+    addDescriptorSetLayoutBinding(
+        bindings,
+        poolSizes,
+        10,
+        VK_DESCRIPTOR_TYPE_SAMPLER,
+        VK_SHADER_STAGE_COMPUTE_BIT,
+        &resources->linearSampler
+    );
+
+    // solid map
+    addDescriptorSetLayoutBinding(
+        bindings,
+        poolSizes,
+        11,
+        VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+        VK_SHADER_STAGE_COMPUTE_BIT,
+        NULL
+    );
+
+    // pressure map READ
+    addDescriptorSetLayoutBinding(
+        bindings,
+        poolSizes,
+        12,
+        VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+        VK_SHADER_STAGE_COMPUTE_BIT,
+        NULL
+    );
+
+    // pressure map WRITE
+    addDescriptorSetLayoutBinding(
+        bindings,
+        poolSizes,
+        13,
+        VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+        VK_SHADER_STAGE_COMPUTE_BIT,
+        NULL
     );
 
     // create descriptor set layout
@@ -143,24 +249,26 @@ void Descriptors::createDescriptorSets() {
         bufferInfo.offset = 0;
         bufferInfo.range = sizeof(UniformBufferObject);
 
-        VkDescriptorImageInfo imageInfo = {0};
-        imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL; // doesnt matter what layout, so set it to be general layout
-        imageInfo.imageView = resources->storageImageView;
-        imageInfo.sampler = resources->storageSampler;
+        VkDescriptorImageInfo uniformImageInfo = resources->storageImage.imageInfo();
 
-        int opp_ping = (ping + 1) % 2;
+        int READ = ping;
+        int WRITE = 1 - ping;
 
-        VkDescriptorImageInfo densityImageREADInfo = {
-            .sampler = resources->densitySampler,
-            .imageView = resources->densityImageViews[ping],
-            .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
-        };
+        VkDescriptorImageInfo densityImageREADInfo = resources->densityImages[READ].imageInfo();
+        VkDescriptorImageInfo densityImageWRITEInfo = resources->densityImages[WRITE].imageInfo();
 
-        VkDescriptorImageInfo densityImageWRITEInfo = {
-            .sampler = VK_NULL_HANDLE,
-            .imageView = resources->densityImageViews[opp_ping],
-            .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
-        };
+        VkDescriptorImageInfo vxREADInfo = resources->xVelocitiesImages[READ].imageInfo();
+        VkDescriptorImageInfo vyREADInfo = resources->yVelocitiesImages[READ].imageInfo();
+        VkDescriptorImageInfo vzREADInfo = resources->zVelocitiesImages[READ].imageInfo();
+
+        VkDescriptorImageInfo vxWRITEInfo = resources->xVelocitiesImages[WRITE].imageInfo();
+        VkDescriptorImageInfo vyWRITEInfo = resources->yVelocitiesImages[WRITE].imageInfo();
+        VkDescriptorImageInfo vzWRITEInfo = resources->zVelocitiesImages[WRITE].imageInfo();
+
+        VkDescriptorImageInfo solidMapImageInfo = resources->solidMap.imageInfo();
+
+        VkDescriptorImageInfo pressureMapImageREADInfo = resources->pressureMapImages[READ].imageInfo();
+        VkDescriptorImageInfo pressureMapImageWRITEInfo = resources->pressureMapImages[WRITE].imageInfo();
 
         // write to descriptor set
         std::vector<VkWriteDescriptorSet> descriptorWrites;
@@ -180,7 +288,7 @@ void Descriptors::createDescriptorSets() {
             descriptorSets[ping],
             1,
             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-            &imageInfo
+            &uniformImageInfo
         );
 
         // density image READ
@@ -188,7 +296,7 @@ void Descriptors::createDescriptorSets() {
             descriptorWrites,
             descriptorSets[ping],
             2,
-            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
             &densityImageREADInfo
         );
 
@@ -199,6 +307,89 @@ void Descriptors::createDescriptorSets() {
             3,
             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
             &densityImageWRITEInfo
+        );
+
+        // x velocities READ
+        addWriteImageDescriptorSet(
+            descriptorWrites,
+            descriptorSets[ping],
+            4,
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            &vxREADInfo
+        );
+
+        // y velocities READ
+        addWriteImageDescriptorSet(
+            descriptorWrites,
+            descriptorSets[ping],
+            5,
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            &vyREADInfo
+        );
+        
+        // z velocities READ
+        addWriteImageDescriptorSet(
+            descriptorWrites,
+            descriptorSets[ping],
+            6,
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            &vzREADInfo
+        );
+
+        // x velocities WRITE
+        addWriteImageDescriptorSet(
+            descriptorWrites,
+            descriptorSets[ping],
+            7,
+            VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+            &vxWRITEInfo
+        );
+
+        // y velocities WRITE
+        addWriteImageDescriptorSet(
+            descriptorWrites,
+            descriptorSets[ping],
+            8,
+            VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+            &vyWRITEInfo
+        );
+        
+        // z velocities WRITE
+        addWriteImageDescriptorSet(
+            descriptorWrites,
+            descriptorSets[ping],
+            9,
+            VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+            &vzWRITEInfo
+        );
+
+        // binding 10 is reserved for the linear sampler
+
+        // solid map
+        addWriteImageDescriptorSet(
+            descriptorWrites,
+            descriptorSets[ping],
+            11,
+            VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+            &solidMapImageInfo
+        );
+
+        // pressure map READ
+        addWriteImageDescriptorSet(
+            descriptorWrites,
+            descriptorSets[ping],
+            12,
+            VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+            &pressureMapImageREADInfo
+        );
+
+        // pressure map WRITE
+        addWriteImageDescriptorSet(
+            descriptorWrites,
+            descriptorSets[ping],
+            13,
+            VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+            &pressureMapImageWRITEInfo
         );
 
         vkUpdateDescriptorSets(vko->device.device, descriptorWrites.size(), descriptorWrites.data(), 0, NULL);

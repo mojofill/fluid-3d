@@ -5,6 +5,11 @@ cbuffer UniformBuffer {
     Camera camera;
     float4 minXYZ;
     float4 maxXYZ;
+    uint32_t frameCount;
+    float g;
+    float dt;
+    float weightSOR;
+    float density;
 };
 
 [[vk::binding(1, 0)]]
@@ -13,24 +18,65 @@ RWTexture2D<float4> outputImage;
 
 [[vk::binding(2, 0)]]
 [[vk::image_format("r32f")]]
-Sampler3D<float> densityImageREAD;
+Texture3D<float> densityImageREAD;
 
 [[vk::binding(3, 0)]]
 [[vk::image_format("r32f")]]
-WTexture3D<float> densityImageWRITE;
+RWTexture3D<float> densityImageWRITE;
+
+[[vk::binding(4, 0)]]
+[[vk::image_format("r32f")]]
+Texture3D<float> vxREAD;
+
+[[vk::binding(5, 0)]]
+[[vk::image_format("r32f")]]
+Texture3D<float> vyREAD;
+
+[[vk::binding(6, 0)]]
+[[vk::image_format("r32f")]]
+Texture3D<float> vzREAD;
+
+[[vk::binding(7, 0)]]
+[[vk::image_format("r32f")]]
+RWTexture3D<float> vxWRITE;
+
+[[vk::binding(8, 0)]]
+[[vk::image_format("r32f")]]
+RWTexture3D<float> vyWRITE;
+
+[[vk::binding(9, 0)]]
+[[vk::image_format("r32f")]]
+RWTexture3D<float> vzWRITE;
+
+[[vk::binding(10, 0)]]
+SamplerState linearSampler;
+
+[[vk::binding(11, 0)]]
+[[vk::image_format("r8ui")]]
+RWTexture3D<uint> solidMap;
+
+[[vk::binding(12, 0)]]
+[[vk::image_format("r32f")]]
+RWTexture3D<float> pressureMapREAD;
+
+[[vk::binding(13, 0)]]
+[[vk::image_format("r32f")]]
+RWTexture3D<float> pressureMapWRITE;
 
 static const float lightStepSize = 0.5;
-static const float regularStepSize = 0.025;
+static const float regularStepSize = 0.005;
 
-static const float extinctionCoefficient = 0.10; // for now, can treat extinction as one across all three color channels. in future i want to separate extinction coefficients per channel
+// for now, can treat extinction as one across all three color channels. in future i want to separate extinction coefficients per channel
+static const float extinctionCoefficient = 0.05;
 
 static const float3 backgroundColor = float3(0.5, 0.8, 0.9);
 // static const float3 backgroundColor = float3(0);
 static const float3 lightColor = float3(1);
-static const float3 cloudAlbedo = float3(1,0.75,0.75);
+static const float3 cloudAlbedo = float3(0.75, 0.25, 0.10);
 
 float marchToLight(float3 pos) {
     float3 sunPos = float3(0, 0, 200);
+    sunPos = camera.pos.xyz;
     Ray ray = Ray(pos, normalize(sunPos - pos));
     float tmin, tmax;
     BoundingBox bb = { minXYZ.xyz, maxXYZ.xyz };
@@ -46,11 +92,11 @@ float marchToLight(float3 pos) {
     densityImageWRITE.GetDimensions(dimensions.x, dimensions.y, dimensions.z);
     float transmittance = 1;
     while (t < tmax) {
-        float density = densityImageREAD.SampleLevel((pos - minXYZ.xyz) / (maxXYZ.xyz - minXYZ.xyz), 0);
+        float density = densityImageREAD.SampleLevel(linearSampler, (pos - minXYZ.xyz) / (maxXYZ.xyz - minXYZ.xyz), 0);
         float stepExtinction = density * extinctionCoefficient * stepSize;
         float stepTransmittance = exp(-stepExtinction);
         transmittance *= stepTransmittance;
-        if (transmittance < 0.01) {
+        if (transmittance < 0.001) {
             break;
         }
         pos += stepSize * ray.dir;
@@ -97,7 +143,7 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID) {
             float3 incomingLight = lightTransmittance * lightColor; // lightColor = float3(1). replace with diff color for diff light color
 
             // find how percent of light that scatters toward the camera
-            float density = densityImageREAD.SampleLevel((currPos - minXYZ.xyz) / (maxXYZ.xyz - minXYZ.xyz), 0);
+            float density = densityImageREAD.SampleLevel(linearSampler, (currPos - minXYZ.xyz) / (maxXYZ.xyz - minXYZ.xyz), 0);
             float stepExtinction = density * extinctionCoefficient * stepSize;
             float stepTransmittance = exp(-stepExtinction);
 

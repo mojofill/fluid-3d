@@ -59,8 +59,8 @@ void Recorder::drawStorageImage(uint32_t ping, uint32_t i) {
     vkCmdBeginRenderPass(commandBuffers[i], &renderPassInfoCmd, VK_SUBPASS_CONTENTS_INLINE);
 
     // here is graphipcs pipeline work
-    vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines->graphicsPipeline);
-    vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines->graphicsPipelineLayout, 0, 1, &descriptors->descriptorSets[ping], 0, NULL);
+    vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines->graphicsPipeline.pipeline);
+    vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines->graphicsPipeline.layout, 0, 1, &descriptors->descriptorSets[ping], 0, NULL);
 
     // specified viewport + scissor to be dynamic => must explicity set them here
     viewport = (VkViewport) {0};
@@ -82,36 +82,170 @@ void Recorder::drawStorageImage(uint32_t ping, uint32_t i) {
     vkCmdDraw(commandBuffers[i], buffers->vertexCount, 1, 0, 0);
 }
 
-void Recorder::testComputeShader(uint32_t ping, uint32_t i) {
-    // first, i want use the compute shader pipeline
-    vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_COMPUTE, pipelines->computePipeline);
-    vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_COMPUTE, pipelines->computePipelineLayout, 0, 1, &descriptors->descriptorSets[ping], 0, NULL);
-    vkCmdDispatch(commandBuffers[i], (vko->width + 15) / 16, (vko->height + 15) / 16, 1);
-    Compute::createImageMemoryBarrier(resources->storageImage, commandBuffers[i]);
+void Recorder::runComputeShader(
+    uint32_t ping,
+    VkCommandBuffer &commandBuffer,
+    Pipeline &computePipeline,
+    uint32_t groupCountX,
+    uint32_t groupCountY,
+    uint32_t groupCountZ
+) {
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline.pipeline);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline.layout, 0, 1, &descriptors->descriptorSets[ping], 0, NULL);
+    vkCmdDispatch(commandBuffer, groupCountX, groupCountY, groupCountZ);
 }
 
-void Recorder::testComputeShader2(uint32_t ping, uint32_t i) {
-    vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_COMPUTE, pipelines->testComputePipeline);
-    vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_COMPUTE, pipelines->testComputePipelineLayout, 0, 1, &descriptors->descriptorSets[ping], 0, NULL);
-    vkCmdDispatch(commandBuffers[i], (maxXYZ.x - minXYZ.x + 7) / 8, (maxXYZ.y - minXYZ.y + 7) / 8, (maxXYZ.z - minXYZ.z + 7) / 8);
-    Compute::createImageMemoryBarrier(resources->densityImages[(ping + 1) % 2], commandBuffers[i]);
+void Recorder::addImageMemoryBarriers(uint32_t ping, VkCommandBuffer &commandBuffer) {
+    Compute::createImageMemoryBarrier(resources->densityImages[1 - ping].image, commandBuffer);
+    Compute::createImageMemoryBarrier(resources->xVelocitiesImages[1 - ping].image, commandBuffer);
+    Compute::createImageMemoryBarrier(resources->yVelocitiesImages[1 - ping].image, commandBuffer);
+    Compute::createImageMemoryBarrier(resources->zVelocitiesImages[1 - ping].image, commandBuffer);
+    Compute::createImageMemoryBarrier(resources->pressureMapImages[1 - ping].image, commandBuffer);
 }
 
-void Recorder::recordCommands(uint32_t ping) {
+void Recorder::raymarchDensityFieldComputeShader(uint32_t ping, VkCommandBuffer &commandBuffer) {
+    runComputeShader(ping, commandBuffer, pipelines->raymarchDensityPipeline, (vko->width + 15) / 16, (vko->height + 15) / 16, 1);
+    Compute::createImageMemoryBarrier(resources->storageImage.image, commandBuffer);
+}
+
+void Recorder::initializationComputeShader(uint32_t ping, VkCommandBuffer &commandBuffer) {
+    runComputeShader(
+        ping,
+        commandBuffer,
+        pipelines->initializationComputePipeline,
+        (maxXYZ.x - minXYZ.x + 7) / 8,
+        (maxXYZ.y - minXYZ.y + 7) / 8,
+        (maxXYZ.z - minXYZ.z + 7) / 8
+    );
+    addImageMemoryBarriers(ping, commandBuffer);
+}
+
+void Recorder::applyExternalForcesComputeShader(uint32_t ping, VkCommandBuffer &commandBuffer) {
+    runComputeShader(
+        ping,
+        commandBuffer,
+        pipelines->applyExternalForcesPipeline,
+        (maxXYZ.x - minXYZ.x + 7) / 8,
+        (maxXYZ.y - minXYZ.y + 7) / 8,
+        (maxXYZ.z - minXYZ.z + 7) / 8
+    );
+    addImageMemoryBarriers(ping, commandBuffer);
+}
+
+void Recorder::advectVelocitiesComputeShader(uint32_t ping, VkCommandBuffer &commandBuffer) {
+    runComputeShader(
+        ping,
+        commandBuffer,
+        pipelines->advectVelocitiesPipeline,
+        (maxXYZ.x - minXYZ.x + 7) / 8,
+        (maxXYZ.y - minXYZ.y + 7) / 8,
+        (maxXYZ.z - minXYZ.z + 7) / 8
+    );
+    addImageMemoryBarriers(ping, commandBuffer);
+}
+
+void Recorder::solvePressureComputeShader(uint32_t ping, VkCommandBuffer &commandBuffer) {
+    // need push constants
+    PushConstants constants = {
+        .ping = ping
+    };
+    vkCmdPushConstants(
+        commandBuffer,
+        pipelines->solvePressurePipeline.layout,
+        VK_SHADER_STAGE_COMPUTE_BIT,
+        0,
+        sizeof(PushConstants),
+        &constants
+    );
+    runComputeShader(
+        ping,
+        commandBuffer,
+        pipelines->solvePressurePipeline,
+        (maxXYZ.x - minXYZ.x + 7) / 8,
+        (maxXYZ.y - minXYZ.y + 7) / 8,
+        (maxXYZ.z - minXYZ.z + 7) / 8
+    );
+    addImageMemoryBarriers(ping, commandBuffer);
+}
+
+void Recorder::applyPressureForceComputeShader(uint32_t ping, VkCommandBuffer &commandBuffer) {
+    runComputeShader(
+        ping,
+        commandBuffer,
+        pipelines->applyPressureForcePipeline,
+        (maxXYZ.x - minXYZ.x + 7) / 8,
+        (maxXYZ.y - minXYZ.y + 7) / 8,
+        (maxXYZ.z - minXYZ.z + 7) / 8
+    );
+    addImageMemoryBarriers(ping, commandBuffer);
+}
+
+void Recorder::advectDensityComputeShader(uint32_t ping, VkCommandBuffer &commandBuffer) {
+    runComputeShader(
+        ping,
+        commandBuffer,
+        pipelines->advectDensityPipeline,
+        (maxXYZ.x - minXYZ.x + 7) / 8,
+        (maxXYZ.y - minXYZ.y + 7) / 8,
+        (maxXYZ.z - minXYZ.z + 7) / 8
+    );
+    addImageMemoryBarriers(ping, commandBuffer);
+}
+
+void Recorder::persistDataComputeShader(uint32_t ping, VkCommandBuffer &commandBuffer) {
+    runComputeShader(
+        ping,
+        commandBuffer,
+        pipelines->persistDataPipeline,
+        (maxXYZ.x - minXYZ.x + 7) / 8,
+        (maxXYZ.y - minXYZ.y + 7) / 8,
+        (maxXYZ.z - minXYZ.z + 7) / 8
+    );
+    addImageMemoryBarriers(ping, commandBuffer);
+}
+
+void Recorder::recordCommands() {
     // record commands (per swapchain image)
-    uint32_t old_ping = ping;
+    uint32_t old_ping = vko->ping;
     for (uint32_t i = 0; i < vko->swapchain.swapchainImageCount; i++) {
-        ping = old_ping;
+        vko->ping = old_ping;
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         vkBeginCommandBuffer(commandBuffers[i], &beginInfo);
 
-        testComputeShader2(ping, i);
-        ping = ping == 0 ? 1 : 0; // swap ping
-        testComputeShader(ping, i);
+        if (!vko->paused) {
+            // upload velocities
+            persistDataComputeShader(vko->ping, commandBuffers[i]);
+            vko->ping = 1 - vko->ping;
+
+            // apply external forces
+            applyExternalForcesComputeShader(vko->ping, commandBuffers[i]);
+            vko->ping = 1 - vko->ping; // swap ping
+
+            // advect velocities
+            advectVelocitiesComputeShader(vko->ping, commandBuffers[i]);
+            vko->ping = 1 - vko->ping; // swap ping
+
+            // solve pressure
+            for (int iter = 0; iter < vko->numPressureSolveIteration; iter++) {
+                solvePressureComputeShader(iter % 2, commandBuffers[i]);
+                vko->ping = 1 - vko->ping; // swap ping
+            }
+
+            // apply pressure force
+            applyPressureForceComputeShader(vko->ping, commandBuffers[i]);
+            vko->ping = 1 - vko->ping; // swap ping
+
+            // advect density
+            advectDensityComputeShader(vko->ping, commandBuffers[i]);
+            vko->ping = 1 - vko->ping;
+        }
+
+        // ray march density
+        raymarchDensityFieldComputeShader(vko->ping, commandBuffers[i]);
 
         // draw the full screen quad
-        drawStorageImage(ping, i);
+        drawStorageImage(vko->ping, i);
 
         vkCmdEndRenderPass(commandBuffers[i]);
         vkEndCommandBuffer(commandBuffers[i]);

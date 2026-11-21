@@ -23,6 +23,6 @@ FragmentOutput main(FragmentInput input) {
 
     int2 texCoord = int2(uv * float2(width, height));
 
-    output.outColor = outputImage.Load(texCoord);
+    output.outColor = outputImage[texCoord];
     return output;
 }

@@ -173,7 +173,7 @@ public float fbm3D(float3 p) {
 public float noise3D(int3 position) {
     float3 p = float3(position);
 
-    float baseNoise = fbm3D(p * 0.030);
+    float baseNoise = fbm3D(p * 0.010);
     float detailNoise = fbm3D(p * 0.005);
 
     baseNoise = baseNoise * 0.5 + 0.5;
@@ -181,5 +181,70 @@ public float noise3D(int3 position) {
 
     float density = baseNoise - (1.0 - detailNoise) * 0.15;
 
-    return lerp(0.0, 1, smoothstep(0.3, 0.7, density));
+    return lerp(0.0, 1.0, smoothstep(0.3, 0.7, density));
+}
+
+// Advances the RNG state and returns a float in [0.0, 1.0)
+public float randf(inout uint state) {
+    // PCG hash
+    state = state * 747796405u + 2891336453u;
+    uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+    word = (word >> 22u) ^ word;
+
+    // Convert top 24 bits to [0.0, 1.0) float
+    return float(word >> 8u) * (1.0 / 16777216.0);
+}
+
+public uint hashSeed(uint3 v) {
+    v = v * 1664525u + 1013904223u;
+    v.x += v.y * v.z;
+    v.y += v.z * v.x;
+    v.z += v.x * v.y;
+    v ^= v >> 16u;
+    v.x += v.y * v.z;
+    v.y += v.z * v.x;
+    v.z += v.x * v.y;
+    return v.x ^ v.y ^ v.z;
+}
+
+public float sampleVx(float3 p, SamplerState linearSampler, Texture3D<float> vxREAD) {
+    int3 dims;
+    vxREAD.GetDimensions(dims.x, dims.y, dims.z);
+    float3 uvw = (p + float3(1.0, 0.5, 0.5)) / float3(dims); // vx has one more cell on x axis, thus need to add 0.5 cell more to proper interpolation
+    return vxREAD.SampleLevel(linearSampler, uvw, 0);
+}
+
+public float sampleVy(float3 p, SamplerState linearSampler, Texture3D<float> vyREAD) {
+    int3 dims;
+    vyREAD.GetDimensions(dims.x, dims.y, dims.z);
+    float3 uvw = (p + float3(0.5, 1.0, 0.5)) / float3(dims);
+    return vyREAD.SampleLevel(linearSampler, uvw, 0);
+}
+
+public float sampleVz(float3 p, SamplerState linearSampler, Texture3D<float> vzREAD) {
+    int3 dims;
+    vzREAD.GetDimensions(dims.x, dims.y, dims.z);
+    float3 uvw = (p + float3(0.5, 0.5, 1.0)) / float3(dims);
+    return vzREAD.SampleLevel(linearSampler, uvw, 0);
+}
+
+public float3 velocityAt(float3 p, SamplerState linearSampler, Texture3D<float> vxREAD, Texture3D<float> vyREAD, Texture3D<float> vzREAD) {
+    return float3(
+        sampleVx(p, linearSampler, vxREAD),
+        sampleVy(p, linearSampler, vyREAD),
+        sampleVz(p, linearSampler, vzREAD)
+    );
+}
+
+public bool isSolid(int3 coord, RWTexture3D<uint> solidMap) {
+    int3 dimensions;
+    solidMap.GetDimensions(dimensions.x, dimensions.y, dimensions.z);
+    if (any(coord < 0) || any(coord >= dimensions)) return true;
+    else return solidMap[coord] == 1;
+}
+
+public float getPressure(int3 p, RWTexture3D<float> pressureMapREAD) {
+    int3 dims;
+    pressureMapREAD.GetDimensions(dims.x, dims.y, dims.z);
+    return any(p < 0) || any(p >= dims) ? 0 : pressureMapREAD[p];
 }

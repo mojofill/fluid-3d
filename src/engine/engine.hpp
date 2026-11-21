@@ -20,13 +20,11 @@ private:
     Renderer renderer;
     
     Camera camera;
-
-    uint32_t ping = 0;
 public:
     void init(VulkanContext *vko);
+    void initializeData();
     void mainLoop();
     void destroy();
-    void swapPing();
 };
 
 #endif

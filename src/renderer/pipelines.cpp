@@ -50,15 +50,20 @@ void Pipelines::createGraphicsPipeline(
 
 void Pipelines::createComputePipeline(Descriptors* descriptors, VkPipeline *destPipeline, VkPipelineLayout *destPipelineLayout, const char *compute_path) {
     Compute::createComputePipeline(vko, descriptors, destPipeline, destPipelineLayout, compute_path);
-} 
+}
+
+void Pipelines::destroyPipeline(Pipeline &pipeline) {
+    vkDestroyPipeline(vko->device.device, pipeline.pipeline, NULL);
+    vkDestroyPipelineLayout(vko->device.device, pipeline.layout, NULL);    
+}
 
 void Pipelines::destroy() {
-    vkDestroyPipeline(vko->device.device, graphicsPipeline, NULL);
-    vkDestroyPipelineLayout(vko->device.device, graphicsPipelineLayout, NULL);
-    
-    // i feel like compute pipelines should go somewhere else, outside of renderer
-    vkDestroyPipeline(vko->device.device, computePipeline, NULL);
-    vkDestroyPipelineLayout(vko->device.device, computePipelineLayout, NULL);
-    vkDestroyPipeline(vko->device.device, testComputePipeline, NULL);
-    vkDestroyPipelineLayout(vko->device.device, testComputePipelineLayout, NULL);
+    destroyPipeline(graphicsPipeline);
+    destroyPipeline(raymarchDensityPipeline);
+    destroyPipeline(initializationComputePipeline);
+    destroyPipeline(advectVelocitiesPipeline);
+    destroyPipeline(solvePressurePipeline);
+    destroyPipeline(applyPressureForcePipeline);
+    destroyPipeline(advectDensityPipeline);
+    destroyPipeline(persistDataPipeline);
 }

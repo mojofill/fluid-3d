@@ -16,6 +16,14 @@ public:
     uint32_t framebufferResized = 0;
     bool fullscreen = false;
 
+    uint32_t ping = 0;
+
+    uint32_t numPressureSolveIteration;
+
+    bool paused = true;
+
+    void *engine; // bang!! can just store the raw pointer. isnt that so cool??
+
     void init();
     void destroy();
     VkCommandBuffer beginSingleTimeCommand();

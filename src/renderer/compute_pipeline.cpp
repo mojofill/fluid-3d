@@ -12,7 +12,14 @@ namespace Compute {
         layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         layoutInfo.setLayoutCount = 1; // how many descriptor set layouts there are
         layoutInfo.pSetLayouts = &descriptors->descriptorSetLayout;
-        layoutInfo.pushConstantRangeCount = 0; // not push constants for now
+        layoutInfo.pushConstantRangeCount = 1;
+        
+        VkPushConstantRange pushConstantRange = {
+            .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+            .offset =  0,
+            .size = sizeof(PushConstants)
+        };
+        layoutInfo.pPushConstantRanges = &pushConstantRange;
 
         if (vkCreatePipelineLayout(vko->device.device, &layoutInfo, NULL, destPipelineLayout) != VK_SUCCESS) {
             printf("failed to create compute pipeline layout\n");

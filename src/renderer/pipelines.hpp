@@ -1,8 +1,14 @@
-#pragma once
+#ifndef PIPELINES_H
+#define PIPELINES_H
 
 #include "../vk_context/vk_context.hpp"
 #include "graphics_pipeline.hpp"
 #include "compute_pipeline.hpp"
+
+typedef struct Pipeline {
+    VkPipeline pipeline{VK_NULL_HANDLE};
+    VkPipelineLayout layout{VK_NULL_HANDLE};
+} Pipeline;
 
 class Pipelines {
 private:
@@ -12,12 +18,15 @@ private:
 public:
     VkVertexInputBindingDescription bindingDescs[1];
 	VkVertexInputAttributeDescription attrDescs[1];
-    VkPipeline graphicsPipeline                = VK_NULL_HANDLE;
-    VkPipelineLayout graphicsPipelineLayout    = VK_NULL_HANDLE;
-    VkPipeline computePipeline                 = VK_NULL_HANDLE;
-    VkPipelineLayout computePipelineLayout     = VK_NULL_HANDLE;
-    VkPipeline testComputePipeline             = VK_NULL_HANDLE;
-    VkPipelineLayout testComputePipelineLayout = VK_NULL_HANDLE;
+    Pipeline graphicsPipeline;
+    Pipeline raymarchDensityPipeline;
+    Pipeline initializationComputePipeline;
+    Pipeline applyExternalForcesPipeline;
+    Pipeline advectVelocitiesPipeline;
+    Pipeline solvePressurePipeline;
+    Pipeline applyPressureForcePipeline;
+    Pipeline advectDensityPipeline;
+    Pipeline persistDataPipeline;
 
     void init(VulkanContext *vko);
 
@@ -35,5 +44,7 @@ public:
         VkPipelineLayout *destPipelineLayout,
         const char *compute_path
     );
+    void destroyPipeline(Pipeline &pipeline);
     void destroy();
 };
+#endif

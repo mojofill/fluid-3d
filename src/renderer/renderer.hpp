@@ -20,6 +20,6 @@ public:
     void init(VulkanContext *vko, Buffers *buffers, Images *images, Descriptors *descriptors, Resources *resources, Recorder *recorder);
 	Pipelines& getPipelinesRef();
 	void destroy();
-	void draw(uint32_t *ping);
+	void draw(uint32_t &ping);
 	void run();
 };
