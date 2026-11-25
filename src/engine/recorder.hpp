@@ -58,7 +58,7 @@ public:
     void advectVelocitiesComputeShader(uint32_t ping, VkCommandBuffer &commandBuffer);
     void solvePressureComputeShader(uint32_t ping, VkCommandBuffer &commandBuffer);
     void applyPressureForceComputeShader(uint32_t ping, VkCommandBuffer &commandBuffer);
-    void advectDensityComputeShader(uint32_t ping, VkCommandBuffer &commandBuffer);
+    void advectSmokeComputeShader(uint32_t ping, VkCommandBuffer &commandBuffer);
     void persistDataComputeShader(uint32_t ping, VkCommandBuffer &commandBuffer);
     
     void drawStorageImage(uint32_t ping, uint32_t i);

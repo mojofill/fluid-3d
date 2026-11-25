@@ -11,7 +11,7 @@ slangc src\assets\shaders\applyExternalForces.slang -target spirv -profile spirv
 slangc src\assets\shaders\advectVelocities.slang -target spirv -profile spirv_1_5 -entry main -stage compute -o src\assets\spvs\advectVelocities.spv
 slangc src\assets\shaders\solvePressure.slang -target spirv -profile spirv_1_5 -entry main -stage compute -o src\assets\spvs\solvePressure.spv
 slangc src\assets\shaders\applyPressureForce.slang -target spirv -profile spirv_1_5 -entry main -stage compute -o src\assets\spvs\applyPressureForce.spv
-slangc src\assets\shaders\advectDensity.slang -target spirv -profile spirv_1_5 -entry main -stage compute -o src\assets\spvs\advectDensity.spv
+slangc src\assets\shaders\advectSmoke.slang -target spirv -profile spirv_1_5 -entry main -stage compute -o src\assets\spvs\advectSmoke.spv
 slangc src\assets\shaders\persistData.slang -target spirv -profile spirv_1_5 -entry main -stage compute -o src\assets\spvs\persistData.spv
 
 echo Configuring CMake...

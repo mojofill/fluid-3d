@@ -64,6 +64,6 @@ void Pipelines::destroy() {
     destroyPipeline(advectVelocitiesPipeline);
     destroyPipeline(solvePressurePipeline);
     destroyPipeline(applyPressureForcePipeline);
-    destroyPipeline(advectDensityPipeline);
+    destroyPipeline(advectSmokePipeline);
     destroyPipeline(persistDataPipeline);
 }

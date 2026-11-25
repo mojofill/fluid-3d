@@ -2,15 +2,17 @@
 #include <iostream>
 #include <chrono>
 
-#define GRAVITY 1000.0f
+#define GRAVITY 0.0f
 #define DELTA_TIME 0.01
-#define WEIGHT_SOR 1.5f
+#define WEIGHT_SOR 1.75f
 #define NUM_PRESSURE_SOLVE_ITERATIONS 10
-#define FLUID_DENSITY 1.0f
+#define FLUID_DENSITY 1000.0f
+#define NUM_SUBSTEPS 2
 
 void Engine::init(VulkanContext *vko) {
     this->vko = vko;
     vko->engine = this;
+    vko->numSubsteps = NUM_SUBSTEPS;
     vko->numPressureSolveIteration = NUM_PRESSURE_SOLVE_ITERATIONS;
     buffers.init(vko);
     images.init(vko);
@@ -19,13 +21,10 @@ void Engine::init(VulkanContext *vko) {
     glm::vec3 minXYZ = glm::vec3(-10,-10,-10);
     glm::vec3 maxXYZ = glm::vec3( 10, 10, 10);
 
-    minXYZ *= 10;
-    maxXYZ *= 10;
+    float s = 25;
 
-    minXYZ.x *= 2;
-    maxXYZ.x *= 2;
-    minXYZ.y *= 2;
-    maxXYZ.y *= 2;
+    minXYZ *= s;
+    maxXYZ *= s;
 
     glm::ivec3 dimensions = maxXYZ - minXYZ;
 
@@ -82,9 +81,9 @@ void Engine::init(VulkanContext *vko) {
     );
     pipelines.createComputePipeline(
         &descriptors,
-        &pipelines.advectDensityPipeline.pipeline,
-        &pipelines.advectDensityPipeline.layout,
-        "./src/assets/spvs/advectDensity.spv"
+        &pipelines.advectSmokePipeline.pipeline,
+        &pipelines.advectSmokePipeline.layout,
+        "./src/assets/spvs/advectSmoke.spv"
     );
     pipelines.createComputePipeline(
         &descriptors,
@@ -126,27 +125,28 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     if (key == GLFW_KEY_L && action == GLFW_RELEASE) {
         vko->ping = 1 - vko->ping;
     }
+    if (key == GLFW_KEY_F && action == GLFW_RELEASE) {
+        vko->fast = 1 - vko->fast;
+    }
 }
 
 void Engine::initializeData() {
     VkCommandBuffer commandBuffer = vko->beginSingleTimeCommand();
-    recorder.initializationComputeShader(vko->ping, commandBuffer);
-    vko->ping = 1 - vko->ping;
-    recorder.initializationComputeShader(vko->ping, commandBuffer);
-    vko->ping = 1 - vko->ping;
+    for (int i = 0; i < 2; i++) {
+        recorder.initializationComputeShader(vko->ping, commandBuffer);
+        vko->ping = 1 - vko->ping;
+        recorder.persistDataComputeShader(vko->ping, commandBuffer);
+        vko->ping = 1 - vko->ping;
+    }
     vko->endSingleTimeCommand(commandBuffer);
 }
 
 void Engine::mainLoop() {
-    uint32_t frameCount = 0;
     using clock = std::chrono::steady_clock;
     auto lastTime = clock::now();
 
     glfwSetKeyCallback(vko->device.window, keyCallback);
 
-    initializeData();
-
-    // ok - ping and current frame are two different ideas. make sure to separate these
     uint32_t currentFrame = 0;
 
     while (!glfwWindowShouldClose(vko->device.window)) {
@@ -162,6 +162,11 @@ void Engine::mainLoop() {
         float dtMs = deltaTime.count();
         float dt = dtMs / 1000.0f;
 
+        // bro lowkey if it work it works, dont worry about it
+        if (vko->frameCount == 1) {
+            initializeData();
+        }
+
         dt = fmin(dt, 0.1);
 
         camera.processEvents(vko->device.window, dt);
@@ -170,15 +175,15 @@ void Engine::mainLoop() {
             .camera = camera.toCameraUBO(),
             .minXYZ = glm::vec4(recorder.minXYZ, 0),
             .maxXYZ = glm::vec4(recorder.maxXYZ, 0),
-            .frameCount = frameCount,
+            .frameCount = vko->frameCount,
             .g = GRAVITY,
-            .dt = DELTA_TIME,
+            .dt = DELTA_TIME / (float) NUM_SUBSTEPS,
             .weightSOR = WEIGHT_SOR,
-            .density = FLUID_DENSITY
+            .density = FLUID_DENSITY,
+            .fast = vko->fast
         };
-        memcpy(buffers.uniformBuffersMapped[vko->ping], &uni, sizeof(uni));
-        frameCount++;
+        memcpy(buffers.uniformBuffersMapped[currentFrame], &uni, sizeof(uni));
+        vko->frameCount++;
         renderer.draw(currentFrame);
-        // vko->paused = true;
     }
 }

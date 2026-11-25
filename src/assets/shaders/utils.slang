@@ -1,5 +1,69 @@
 module utils;
 
+[[vk::binding(0, 0)]]
+public cbuffer UniformBuffer {
+    public Camera camera;
+    public float4 minXYZ;
+    public float4 maxXYZ;
+    public uint32_t frameCount;
+    public float g;
+    public float dt;
+    public float weightSOR;
+    public float density;
+    public bool fast;
+};
+
+[[vk::binding(1, 0)]]
+[[vk::image_format("rgba32f")]]
+public RWTexture2D<float4> outputImage;
+
+[[vk::binding(2, 0)]]
+[[vk::image_format("rgba16f")]]
+public Texture3D<float4> densityImageREAD;
+
+[[vk::binding(3, 0)]]
+[[vk::image_format("rgba16f")]]
+public RWTexture3D<float4> densityImageWRITE;
+
+[[vk::binding(4, 0)]]
+[[vk::image_format("r32f")]]
+public Texture3D<float> vxREAD;
+
+[[vk::binding(5, 0)]]
+[[vk::image_format("r32f")]]
+public Texture3D<float> vyREAD;
+
+[[vk::binding(6, 0)]]
+[[vk::image_format("r32f")]]
+public Texture3D<float> vzREAD;
+
+[[vk::binding(7, 0)]]
+[[vk::image_format("r32f")]]
+public RWTexture3D<float> vxWRITE;
+
+[[vk::binding(8, 0)]]
+[[vk::image_format("r32f")]]
+public RWTexture3D<float> vyWRITE;
+
+[[vk::binding(9, 0)]]
+[[vk::image_format("r32f")]]
+public RWTexture3D<float> vzWRITE;
+
+[[vk::binding(10, 0)]]
+public SamplerState linearSampler;
+
+[[vk::binding(11, 0)]]
+[[vk::image_format("r8ui")]]
+public RWTexture3D<uint> solidMap;
+
+[[vk::binding(12, 0)]]
+[[vk::image_format("r32f")]]
+public RWTexture3D<float> pressureMapREAD;
+
+[[vk::binding(13, 0)]]
+[[vk::image_format("r32f")]]
+public RWTexture3D<float> pressureMapWRITE;
+
 public const static float fov = 1.5707963268 * 0.9f;
 
 public struct Camera {
@@ -182,6 +246,25 @@ public float noise3D(int3 position) {
     float density = baseNoise - (1.0 - detailNoise) * 0.15;
 
     return lerp(0.0, 1.0, smoothstep(0.3, 0.7, density));
+}
+
+// Converts a float3 seed into a pseudo-random float3 in [0, 1)
+public float3 hash33(float3 p) {
+    uint3 v = asuint(p);
+    v = v * 1664525u + 1013904223u;
+
+    v.x += v.y * v.z;
+    v.y += v.z * v.x;
+    v.z += v.x * v.y;
+
+    v ^= v >> 16u;
+
+    v.x += v.y * v.z;
+    v.y += v.z * v.x;
+    v.z += v.x * v.y;
+
+    // Mask to 24-bit mantissa and normalize to [0, 1)
+    return float3(v >> 8u) * (1.0 / 16777216.0);
 }
 
 // Advances the RNG state and returns a float in [0.0, 1.0)

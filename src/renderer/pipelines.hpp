@@ -25,7 +25,7 @@ public:
     Pipeline advectVelocitiesPipeline;
     Pipeline solvePressurePipeline;
     Pipeline applyPressureForcePipeline;
-    Pipeline advectDensityPipeline;
+    Pipeline advectSmokePipeline;
     Pipeline persistDataPipeline;
 
     void init(VulkanContext *vko);

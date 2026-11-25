@@ -1,64 +1,5 @@
 import utils;
 
-[[vk::binding(0, 0)]]
-cbuffer UniformBuffer {
-    Camera camera;
-    float4 minXYZ;
-    float4 maxXYZ;
-    uint32_t frameCount;
-};
-
-[[vk::binding(1, 0)]]
-[[vk::image_format("rgba32f")]]
-RWTexture2D<float4> outputImage;
-
-[[vk::binding(2, 0)]]
-[[vk::image_format("r32f")]]
-Texture3D<float> densityImageREAD;
-
-[[vk::binding(3, 0)]]
-[[vk::image_format("r32f")]]
-WTexture3D<float> densityImageWRITE;
-
-[[vk::binding(4, 0)]]
-[[vk::image_format("r32f")]]
-Texture3D<float> vxREAD;
-
-[[vk::binding(5, 0)]]
-[[vk::image_format("r32f")]]
-Texture3D<float> vyREAD;
-
-[[vk::binding(6, 0)]]
-[[vk::image_format("r32f")]]
-Texture3D<float> vzREAD;
-
-[[vk::binding(7, 0)]]
-[[vk::image_format("r32f")]]
-RWTexture3D<float> vxWRITE;
-
-[[vk::binding(8, 0)]]
-[[vk::image_format("r32f")]]
-RWTexture3D<float> vyWRITE;
-
-[[vk::binding(9, 0)]]
-[[vk::image_format("r32f")]]
-RWTexture3D<float> vzWRITE;
-
-[[vk::binding(10, 0)]]
-SamplerState linearSampler;
-
-[[vk::binding(11, 0)]]
-[[vk::image_format("r8ui")]]
-RWTexture3D<uint> solidMap;
-
-[[vk::binding(12, 0)]]
-[[vk::image_format("r32f")]]
-RWTexture3D<float> pressureMapREAD;
-
-[[vk::binding(13, 0)]]
-[[vk::image_format("r32f")]]
-RWTexture3D<float> pressureMapWRITE;
-
 // do some 3d perlin noise
 // alright my next step is to turn this into 3d smoke. that is, give it some velocity and pressure
 
@@ -70,15 +11,25 @@ void main(uint3 dispatchThreadID: SV_DispatchThreadID) {
     densityImageWRITE.GetDimensions(dims.x, dims.y, dims.z);
     if (any(coord >= dims)) return;
 
+    densityImageWRITE[coord] = densityImageREAD[coord];
+    vxWRITE[coord] = vxREAD[coord];
+    vyWRITE[coord] = vyREAD[coord];
+    vzWRITE[coord] = vzREAD[coord];
+    pressureMapWRITE[coord] = pressureMapREAD[coord];
+
+    if (coord.x == dims.x - 1) vxWRITE[coord + int3(1, 0, 0)] = vxREAD[coord + int3(1, 0, 0)];
+    if (coord.y == dims.y - 1) vyWRITE[coord + int3(0, 1, 0)] = vyREAD[coord + int3(0, 1, 0)];
+    if (coord.z == dims.z - 1) vzWRITE[coord + int3(0, 0, 1)] = vzREAD[coord + int3(0, 0, 1)];
+
     // initialize density
     // float3 p = coord - 0.5 * float3(dims);
     // if (length(p) < 80) densityImageWRITE.Store(coord, 1);
     // else densityImageWRITE.Store(coord, 0);
-    // densityImageWRITE.Store(coord, noise3D(int3(coord)));
+    densityImageWRITE.Store(coord, 0);
 
     // initialize velocity
     int width = dims.x;
-    int length = dims.y;
+    int _length = dims.y;
     int height = dims.z;
 
     uint seed = hashSeed(uint3(dispatchThreadID.xy, uint(frameCount)));
@@ -91,7 +42,7 @@ void main(uint3 dispatchThreadID: SV_DispatchThreadID) {
 
     if (coord.y == 0) vyWRITE.Store(coord, 0);
     else vyWRITE.Store(coord, k * (2 * randf(seed) - 1));
-    if (coord.y == length - 1) vyWRITE.Store(coord + int3(0,1,0), 0);
+    if (coord.y == _length - 1) vyWRITE.Store(coord + int3(0,1,0), 0);
 
     if (coord.z == 0) vzWRITE.Store(coord, 0);
     else vzWRITE.Store(coord, k * (2 * randf(seed) - 1));

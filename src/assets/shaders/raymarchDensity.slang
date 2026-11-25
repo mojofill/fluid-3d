@@ -1,80 +1,21 @@
 import utils;
 
-[[vk::binding(0, 0)]]
-cbuffer UniformBuffer {
-    Camera camera;
-    float4 minXYZ;
-    float4 maxXYZ;
-    uint32_t frameCount;
-    float g;
-    float dt;
-    float weightSOR;
-    float density;
-};
-
-[[vk::binding(1, 0)]]
-[[vk::image_format("rgba32f")]]
-RWTexture2D<float4> outputImage;
-
-[[vk::binding(2, 0)]]
-[[vk::image_format("r32f")]]
-Texture3D<float> densityImageREAD;
-
-[[vk::binding(3, 0)]]
-[[vk::image_format("r32f")]]
-RWTexture3D<float> densityImageWRITE;
-
-[[vk::binding(4, 0)]]
-[[vk::image_format("r32f")]]
-Texture3D<float> vxREAD;
-
-[[vk::binding(5, 0)]]
-[[vk::image_format("r32f")]]
-Texture3D<float> vyREAD;
-
-[[vk::binding(6, 0)]]
-[[vk::image_format("r32f")]]
-Texture3D<float> vzREAD;
-
-[[vk::binding(7, 0)]]
-[[vk::image_format("r32f")]]
-RWTexture3D<float> vxWRITE;
-
-[[vk::binding(8, 0)]]
-[[vk::image_format("r32f")]]
-RWTexture3D<float> vyWRITE;
-
-[[vk::binding(9, 0)]]
-[[vk::image_format("r32f")]]
-RWTexture3D<float> vzWRITE;
-
-[[vk::binding(10, 0)]]
-SamplerState linearSampler;
-
-[[vk::binding(11, 0)]]
-[[vk::image_format("r8ui")]]
-RWTexture3D<uint> solidMap;
-
-[[vk::binding(12, 0)]]
-[[vk::image_format("r32f")]]
-RWTexture3D<float> pressureMapREAD;
-
-[[vk::binding(13, 0)]]
-[[vk::image_format("r32f")]]
-RWTexture3D<float> pressureMapWRITE;
-
 static const float lightStepSize = 0.5;
 static const float regularStepSize = 0.005;
+static const int maxNumRegularSteps = 200;
+static const int FASTmaxNumRegularSteps = 10;
 
 // for now, can treat extinction as one across all three color channels. in future i want to separate extinction coefficients per channel
-static const float extinctionCoefficient = 0.05;
+static const float3 extinctionCoefficient = 0.025;
 
-static const float3 backgroundColor = float3(0.5, 0.8, 0.9);
-// static const float3 backgroundColor = float3(0);
+// static const float3 backgroundColor = float3(0.5, 0.8, 0.9);
+// static const float3 backgroundColor = float3(1);
+static const float3 backgroundColor = float3(0);
 static const float3 lightColor = float3(1);
-static const float3 cloudAlbedo = float3(0.75, 0.25, 0.10);
+// static const float3 cloudAlbedo = float3(0.75, 0.25, 0.10);
+static const float3 cloudAlbedo = float3(1);
 
-float marchToLight(float3 pos) {
+float3 marchToLight(float3 pos) {
     float3 sunPos = float3(0, 0, 200);
     sunPos = camera.pos.xyz;
     Ray ray = Ray(pos, normalize(sunPos - pos));
@@ -90,17 +31,18 @@ float marchToLight(float3 pos) {
 
     int3 dimensions;
     densityImageWRITE.GetDimensions(dimensions.x, dimensions.y, dimensions.z);
-    float transmittance = 1;
+    float3 transmittance = 1;
     while (t < tmax) {
-        float density = densityImageREAD.SampleLevel(linearSampler, (pos - minXYZ.xyz) / (maxXYZ.xyz - minXYZ.xyz), 0);
-        float stepExtinction = density * extinctionCoefficient * stepSize;
-        float stepTransmittance = exp(-stepExtinction);
+        float ds = min(lightStepSize, tmax - t);
+        float3 density = densityImageREAD.SampleLevel(linearSampler, (pos - minXYZ.xyz) / (maxXYZ.xyz - minXYZ.xyz), 0).xyz;
+        float3 stepExtinction = density * extinctionCoefficient * ds;
+        float3 stepTransmittance = exp(-stepExtinction);
         transmittance *= stepTransmittance;
-        if (transmittance < 0.001) {
+        if (any(transmittance < 0.01)) {
             break;
         }
-        pos += stepSize * ray.dir;
-        t += stepSize;
+        pos += ds * ray.dir;
+        t += ds;
     }
     return transmittance;
 }
@@ -125,13 +67,13 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID) {
         tmin = max(tmin, 0);
         // ok. remember your beer lambert law
         ray.origin += (tmin + 1e-4) * ray.dir;
-        float transmittance = 1;
+        float3 transmittance = 1;
         float3 scatteredLight = float3(0);
 
         float stepSize = regularStepSize;
         float rayLength = tmax - tmin;
         int numSteps = max(1, int(ceil(rayLength / stepSize)));
-        numSteps = min(numSteps, 10);
+        numSteps = min(numSteps, fast ? FASTmaxNumRegularSteps : maxNumRegularSteps);
         stepSize = rayLength / float(numSteps);
 
         float3 currPos = ray.origin;
@@ -139,21 +81,23 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID) {
         for (int i = 0; i < numSteps; i++) {
             // get percent of light that reaches this sample point from the sun
             // for now set the camera origin as the sun, like a flashlight
-            float lightTransmittance = marchToLight(currPos);
+            float3 lightTransmittance = marchToLight(currPos);
             float3 incomingLight = lightTransmittance * lightColor; // lightColor = float3(1). replace with diff color for diff light color
 
             // find how percent of light that scatters toward the camera
-            float density = densityImageREAD.SampleLevel(linearSampler, (currPos - minXYZ.xyz) / (maxXYZ.xyz - minXYZ.xyz), 0);
-            float stepExtinction = density * extinctionCoefficient * stepSize;
-            float stepTransmittance = exp(-stepExtinction);
+            float4 smokeData = densityImageREAD.SampleLevel(linearSampler, (currPos - minXYZ.xyz) / (maxXYZ.xyz - minXYZ.xyz), 0);
+            float density = smokeData.w;
+            float3 smokeColor = smokeData.xyz;
+            float3 stepExtinction = density * extinctionCoefficient * stepSize;
+            float3 stepTransmittance = exp(-stepExtinction);
 
-            float3 stepScatter = incomingLight * cloudAlbedo * (1.0 - stepTransmittance); // cloud base color/albedo = float3(1), change to diff color for diff cloud tint. step transmittance = how much light was kept. 1 - step transmittance = how much light was scattered (could be absorbed no? ig it doesnt matter for an approximation). only scattered light contributes light to the camera
+            float3 stepScatter = incomingLight * smokeColor * (1.0 - stepTransmittance); // cloud base color/albedo = float3(1), change to diff color for diff cloud tint. step transmittance = how much light was kept. 1 - step transmittance = how much light was scattered (could be absorbed no? ig it doesnt matter for an approximation). only scattered light contributes light to the camera
 
             scatteredLight += transmittance * stepScatter;
 
             transmittance *= stepTransmittance; // keep track of how much is being kept as ray moves further into medium
 
-            if (transmittance < 0.01) {
+            if (any(transmittance < 0.01)) {
                 break;
             }
 

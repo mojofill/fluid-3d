@@ -1,4 +1,5 @@
 #include "recorder.hpp"
+#include <iostream>
 
 void Recorder::init(
     VulkanContext *vko,
@@ -180,11 +181,11 @@ void Recorder::applyPressureForceComputeShader(uint32_t ping, VkCommandBuffer &c
     addImageMemoryBarriers(ping, commandBuffer);
 }
 
-void Recorder::advectDensityComputeShader(uint32_t ping, VkCommandBuffer &commandBuffer) {
+void Recorder::advectSmokeComputeShader(uint32_t ping, VkCommandBuffer &commandBuffer) {
     runComputeShader(
         ping,
         commandBuffer,
-        pipelines->advectDensityPipeline,
+        pipelines->advectSmokePipeline,
         (maxXYZ.x - minXYZ.x + 7) / 8,
         (maxXYZ.y - minXYZ.y + 7) / 8,
         (maxXYZ.z - minXYZ.z + 7) / 8
@@ -214,31 +215,33 @@ void Recorder::recordCommands() {
         vkBeginCommandBuffer(commandBuffers[i], &beginInfo);
 
         if (!vko->paused) {
-            // upload velocities
-            persistDataComputeShader(vko->ping, commandBuffers[i]);
-            vko->ping = 1 - vko->ping;
+            for (int step = 0; step < vko->numSubsteps; step++) {
+                // upload velocities
+                persistDataComputeShader(vko->ping, commandBuffers[i]);
+                vko->ping = 1 - vko->ping;
 
-            // apply external forces
-            applyExternalForcesComputeShader(vko->ping, commandBuffers[i]);
-            vko->ping = 1 - vko->ping; // swap ping
-
-            // advect velocities
-            advectVelocitiesComputeShader(vko->ping, commandBuffers[i]);
-            vko->ping = 1 - vko->ping; // swap ping
-
-            // solve pressure
-            for (int iter = 0; iter < vko->numPressureSolveIteration; iter++) {
-                solvePressureComputeShader(iter % 2, commandBuffers[i]);
+                // apply external forces
+                applyExternalForcesComputeShader(vko->ping, commandBuffers[i]);
                 vko->ping = 1 - vko->ping; // swap ping
+
+                // advect velocities
+                advectVelocitiesComputeShader(vko->ping, commandBuffers[i]);
+                vko->ping = 1 - vko->ping; // swap ping
+
+                // solve pressure
+                for (int iter = 0; iter < vko->numPressureSolveIteration; iter++) {
+                    solvePressureComputeShader(iter % 2, commandBuffers[i]);
+                    vko->ping = 1 - vko->ping; // swap ping
+                }
+
+                // apply pressure force
+                applyPressureForceComputeShader(vko->ping, commandBuffers[i]);
+                vko->ping = 1 - vko->ping; // swap ping
+
+                // advect density
+                advectSmokeComputeShader(vko->ping, commandBuffers[i]);
+                vko->ping = 1 - vko->ping;
             }
-
-            // apply pressure force
-            applyPressureForceComputeShader(vko->ping, commandBuffers[i]);
-            vko->ping = 1 - vko->ping; // swap ping
-
-            // advect density
-            advectDensityComputeShader(vko->ping, commandBuffers[i]);
-            vko->ping = 1 - vko->ping;
         }
 
         // ray march density

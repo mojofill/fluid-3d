@@ -15,14 +15,20 @@ void Resources::createDensityImages(int width, int length, int height) {
             width,
             length,
             height,
-            VK_FORMAT_R32_SFLOAT,
+            VK_FORMAT_R16G16B16A16_SFLOAT,
             VK_IMAGE_TILING_OPTIMAL,
             VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             &densityImages[i].image,
             &densityImages[i].memory
         );
-        images->createImageView(densityImages[i].image, VK_IMAGE_VIEW_TYPE_3D, VK_FORMAT_R32_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT, &densityImages[i].imageView);
+        images->createImageView(
+            densityImages[i].image,
+            VK_IMAGE_VIEW_TYPE_3D,
+            VK_FORMAT_R16G16B16A16_SFLOAT,
+            VK_IMAGE_ASPECT_COLOR_BIT,
+            &densityImages[i].imageView
+        );
     }
 }
 

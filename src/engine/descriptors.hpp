@@ -16,6 +16,7 @@ typedef struct UniformBufferObject {
     float dt;
     float weightSOR;
     float density;
+    uint32_t fast;
 } UniformBufferObject;
 
 typedef struct PushConstants {
